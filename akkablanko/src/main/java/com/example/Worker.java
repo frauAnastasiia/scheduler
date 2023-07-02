@@ -61,7 +61,7 @@ public class Worker extends AbstractBehavior<Worker.Message> {
 
     public Behavior<Message> onIncrement(Increment msg){
         msg.multiplicator.tell(new Worker.Multiply(msg.numberToIncrement + 1));
-        //this.scheduler.tell(new Scheduler.WorkerIsDone());
+        this.scheduler.tell(new Scheduler.WorkerIsDone());
         return Behaviors.stopped();
     }
 
@@ -73,9 +73,11 @@ public class Worker extends AbstractBehavior<Worker.Message> {
                 result *= val;
             }
             task.tell(new Tasks.Result(result));
+            this.scheduler.tell(new Scheduler.WorkerIsDone());
+            return Behaviors.stopped();
         }
 
-        return Behaviors.stopped();
+        return this;
     }
 
     public Behavior<Message> onListSize(ListSize msg){

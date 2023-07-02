@@ -9,6 +9,7 @@ com/example/Scheduler.java
  com.example.Scheduler$Message
  com.example.Scheduler$TaskIsCreated
  com.example.Scheduler$TaskIsDone
+ com.example.Scheduler$WorkerIsDone
 com/example/Worker.java
  com.example.Worker
  com.example.Worker$Increment

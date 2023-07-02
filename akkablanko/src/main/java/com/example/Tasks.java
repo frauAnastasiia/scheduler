@@ -70,7 +70,6 @@ public class Tasks extends AbstractBehavior<Tasks.Message> {
         getContext().getLog().info("List:" + taskList.toString());
         for (int i = 0; i < taskList.size(); i++){
             getContext().getLog().info("List element:" + taskList.get(i).toString());
-            getContext().getLog().info("");
             msg.neededWorkers.get(i).tell(new Worker.Increment(multiplicator, taskList.get(i)));
         }
         return this;
@@ -78,7 +77,7 @@ public class Tasks extends AbstractBehavior<Tasks.Message> {
 
     private Behavior<Message> onResult(Result msg){
         getContext().getLog().info("Result of multiplication for {} is: {}", this.taskName, msg.result);
-        this.scheduler.tell(new Scheduler.TaskIsDone(taskList.size() + 1));
+        this.scheduler.tell(new Scheduler.TaskIsDone());
         return this;
     }
 }

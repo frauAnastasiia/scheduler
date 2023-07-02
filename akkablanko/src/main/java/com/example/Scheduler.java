@@ -37,13 +37,9 @@ public class Scheduler extends AbstractBehavior<Scheduler.Message> {
         }
     }
 
-    public static class TaskIsDone implements Message {
-        int usedWorkers;
+    public static class TaskIsDone implements Message { }
 
-        public TaskIsDone(int usedWorkers) {
-            this.usedWorkers = usedWorkers;
-        }
-    }
+    public static class WorkerIsDone implements Message { }
 
     public static Behavior<Message> create() {
         return Behaviors.setup(context -> Behaviors.withTimers(timers -> new Scheduler(context)));
@@ -64,10 +60,11 @@ public class Scheduler extends AbstractBehavior<Scheduler.Message> {
                 .onMessage(CreateTask.class, this::onCreateTask)
                 .onMessage(TaskIsCreated.class, this::isCreated)
                 .onMessage(TaskIsDone.class, this::onTaskIsDone)
+                .onMessage(WorkerIsDone.class, this::onWorkerIsDone)
                 .build();
     }
 
-    private Behavior<Message> onCreateTask(CreateTask msg) {
+    private Behavior<Message> onCreateTask(CreateTask msg) throws InterruptedException {
         int countTasks = 1;
         while (countTasks <= 20) {
             getContext().getLog().info("I AM HERE");
@@ -81,6 +78,7 @@ public class Scheduler extends AbstractBehavior<Scheduler.Message> {
         if (msg.neededNumberOfWorkers < MAX_WORKERS - activeWorkers) {
             createWorkersForTask(msg.neededNumberOfWorkers, msg.task);
         } else {
+            getContext().getLog().info("Added task into queue" + msg.taskName);
             this.taskQueue.add(new Pair<>(msg.task, msg.neededNumberOfWorkers));
         }
         return this;
@@ -89,16 +87,15 @@ public class Scheduler extends AbstractBehavior<Scheduler.Message> {
     private void createWorkersForTask(int neededNumberOfWorkers, ActorRef<Tasks.Message> task) {
         activeWorkers += neededNumberOfWorkers;
         ArrayList<ActorRef<Worker.Message>> neededWorkers = new ArrayList<>();
-        for (int i = 0; i < activeWorkers; i++) {
+        for (int i = 0; i < neededNumberOfWorkers; i++) {
             UUID uniqueId = UUID.randomUUID();
             ActorRef<Worker.Message> newWorker = this.getContext().spawn(Worker.create(this.getContext().getSelf(), task), "worker" + uniqueId);
             neededWorkers.add(newWorker);
-            task.tell(new Tasks.CreatedWorkers(neededWorkers));
         }
+        task.tell(new Tasks.CreatedWorkers(neededWorkers));
     }
 
     private Behavior<Message> onTaskIsDone(TaskIsDone msg) {
-        activeWorkers -= msg.usedWorkers;
         if (!taskQueue.isEmpty()){
             Pair<ActorRef<Tasks.Message>, Integer> currentTask = taskQueue.poll();
             if (currentTask.second() < MAX_WORKERS - activeWorkers){
@@ -108,6 +105,11 @@ public class Scheduler extends AbstractBehavior<Scheduler.Message> {
         else{
             getContext().getLog().info("All tasks are done!");
         }
+        return this;
+    }
+
+    private Behavior<Message> onWorkerIsDone(WorkerIsDone msg) {
+        activeWorkers -= 1;
         return this;
     }
 }
