@@ -1,3 +1,8 @@
+// Alla Spitzer 222114
+// Olha Borysova 230606
+// Anastasiia Kulyani 230612
+// Dmytro Pahuba 230665
+
 package com.example;
 
 import akka.actor.typed.ActorRef;
@@ -19,12 +24,11 @@ public class Scheduler extends AbstractBehavior<Scheduler.Message> {
     public interface Message {
     }
 
-    ;
-
-
+    //erstellt einen Task
     public static class CreateTask implements Message {
     }
 
+    //fordert neue Workers an
     public static class TaskIsCreated implements Message {
         String taskName;
         ActorRef<Tasks.Message> task;
@@ -36,8 +40,6 @@ public class Scheduler extends AbstractBehavior<Scheduler.Message> {
             this.neededNumberOfWorkers = neededNumberOfWorkers;
         }
     }
-
-    public static class TaskIsDone implements Message { }
 
     public static class WorkerIsDone implements Message { }
 
@@ -59,21 +61,21 @@ public class Scheduler extends AbstractBehavior<Scheduler.Message> {
         return newReceiveBuilder()
                 .onMessage(CreateTask.class, this::onCreateTask)
                 .onMessage(TaskIsCreated.class, this::isCreated)
-                .onMessage(TaskIsDone.class, this::onTaskIsDone)
                 .onMessage(WorkerIsDone.class, this::onWorkerIsDone)
                 .build();
     }
 
+    //erstellt 20 Tasks
     private Behavior<Message> onCreateTask(CreateTask msg) throws InterruptedException {
         int countTasks = 1;
         while (countTasks <= 20) {
-            getContext().getLog().info("I AM HERE");
             this.getContext().spawn(Tasks.create(countTasks, this.getContext().getSelf()), "task" + countTasks);
             countTasks++;
         }
         return this;
     }
 
+    //wenn maximale Anzahl an Workers nicht überschritten wurde, erstellt neue Workers für ein Task
     private Behavior<Message> isCreated(TaskIsCreated msg) {
         if (msg.neededNumberOfWorkers < MAX_WORKERS - activeWorkers) {
             createWorkersForTask(msg.neededNumberOfWorkers, msg.task);
@@ -84,6 +86,7 @@ public class Scheduler extends AbstractBehavior<Scheduler.Message> {
         return this;
     }
 
+    //initialisiert und übergibt erstellte Workers an Task
     private void createWorkersForTask(int neededNumberOfWorkers, ActorRef<Tasks.Message> task) {
         activeWorkers += neededNumberOfWorkers;
         ArrayList<ActorRef<Worker.Message>> neededWorkers = new ArrayList<>();
@@ -95,21 +98,19 @@ public class Scheduler extends AbstractBehavior<Scheduler.Message> {
         task.tell(new Tasks.CreatedWorkers(neededWorkers));
     }
 
-    private Behavior<Message> onTaskIsDone(TaskIsDone msg) {
+    //prüft den nächsten auszuführenden Task und passt die Anzahl an aktiven Workern entsprechend an
+    private Behavior<Message> onWorkerIsDone(WorkerIsDone msg) {
+        activeWorkers -= 1;
         if (!taskQueue.isEmpty()){
-            Pair<ActorRef<Tasks.Message>, Integer> currentTask = taskQueue.poll();
-            if (currentTask.second() < MAX_WORKERS - activeWorkers){
+            Pair<ActorRef<Tasks.Message>, Integer> currentTask = taskQueue.peek();
+            if (currentTask.second() <= MAX_WORKERS - activeWorkers){
+                currentTask = taskQueue.poll();
                 createWorkersForTask(currentTask.second(), currentTask.first());
             }
         }
-        else{
+        else if(activeWorkers == 0){
             getContext().getLog().info("All tasks are done!");
         }
-        return this;
-    }
-
-    private Behavior<Message> onWorkerIsDone(WorkerIsDone msg) {
-        activeWorkers -= 1;
         return this;
     }
 }

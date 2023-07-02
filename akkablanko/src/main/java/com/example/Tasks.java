@@ -1,3 +1,8 @@
+// Alla Spitzer 222114
+// Olha Borysova 230606
+// Anastasiia Kulyani 230612
+// Dmytro Pahuba 230665
+
 package com.example;
 
 import akka.actor.typed.ActorRef;
@@ -11,6 +16,7 @@ public class Tasks extends AbstractBehavior<Tasks.Message> {
 
     public interface Message {};
 
+    //liefert Liste mit Referenzen auf Workers
     public static class CreatedWorkers implements Message {
         ArrayList<ActorRef<Worker.Message>> neededWorkers;
 
@@ -19,6 +25,7 @@ public class Tasks extends AbstractBehavior<Tasks.Message> {
         }
     }
 
+    //liefert das endliche Ergebnis nach der Multiplikation
     public static class Result implements Message {
         int result;
 
@@ -43,6 +50,7 @@ public class Tasks extends AbstractBehavior<Tasks.Message> {
         taskList = createRandomList();
     }
 
+    //erstellt eine Liste mit zufällig generierten ganzen Zahlen zwischen 1 und 6
     private ArrayList<Integer> createRandomList(){
         ArrayList<Integer> randomNumbersList = new ArrayList<>();
         Random random = new Random();
@@ -63,21 +71,20 @@ public class Tasks extends AbstractBehavior<Tasks.Message> {
                 .build();
     }
 
+    //ordnet die Aufgaben den erstellten Workern zu
     private Behavior<Message> onCreatedWorkers(CreatedWorkers msg) {
         ActorRef<Worker.Message> multiplicator = msg.neededWorkers.get(msg.neededWorkers.size() - 1);
         multiplicator.tell(new Worker.ListSize(this.taskList.size()));
-        //1 2 3 4    //w1 w2 w3 w4 w5
         getContext().getLog().info("List:" + taskList.toString());
         for (int i = 0; i < taskList.size(); i++){
-            getContext().getLog().info("List element:" + taskList.get(i).toString());
             msg.neededWorkers.get(i).tell(new Worker.Increment(multiplicator, taskList.get(i)));
         }
         return this;
     }
 
+    //liefert das Ergebnis nach der Multiplikation auf die Konsole
     private Behavior<Message> onResult(Result msg){
         getContext().getLog().info("Result of multiplication for {} is: {}", this.taskName, msg.result);
-        this.scheduler.tell(new Scheduler.TaskIsDone());
         return this;
     }
 }

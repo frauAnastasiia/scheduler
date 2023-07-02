@@ -1,3 +1,8 @@
+// Alla Spitzer 222114
+// Olha Borysova 230606
+// Anastasiia Kulyani 230612
+// Dmytro Pahuba 230665
+
 package com.example;
 
 import akka.actor.typed.ActorRef;
@@ -22,8 +27,8 @@ public class AkkaMainSystem extends AbstractBehavior<AkkaMainSystem.Create> {
         return newReceiveBuilder().onMessage(Create.class, this::onCreate).build();
     }
 
+    //erstellt Akteuren
     private Behavior<Create> onCreate(Create command) {
-        //#create-actors
         ActorRef<Scheduler.Message> scheduler = this.getContext().spawn(Scheduler.create(), "scheduler");
 
         scheduler.tell(new Scheduler.CreateTask());

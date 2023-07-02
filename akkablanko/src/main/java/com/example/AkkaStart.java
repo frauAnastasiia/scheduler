@@ -1,3 +1,8 @@
+// Alla Spitzer 222114
+// Olha Borysova 230606
+// Anastasiia Kulyani 230612
+// Dmytro Pahuba 230665
+
 package com.example;
 
 import akka.actor.typed.ActorSystem;
