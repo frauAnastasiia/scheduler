@@ -11,21 +11,25 @@ public class Tasks extends AbstractBehavior<Tasks.Message> {
 
     public interface Message {};
 
-    public static class CreateIncrementator implements Message {
-        ActorRef<Worker.Message> worker;
-        int numberToIncrement;
+    public static class CreatedWorkers implements Message {
+        ArrayList<ActorRef<Worker.Message>> neededWorkers;
 
-        private CreateIncrementator(ActorRef<Worker.Message> worker, int numberToIncrement){
-            this.worker = worker;
-            this.numberToIncrement = numberToIncrement;
+        public CreatedWorkers(ArrayList<ActorRef<Worker.Message>> neededWorkers){
+            this.neededWorkers = neededWorkers;
         }
     }
 
-    public static class CreateMultiplikator implements Message { }
+    public static class Result implements Message {
+        int result;
+
+        public Result(int result){
+            this.result = result;
+        }
+    }
 
 
     public static Behavior<Message> create(int id, ActorRef<Scheduler.Message> schedulerRef) {
-        return Behaviors.setup(context -> new Tasks(context, id, schedulerRef);
+        return Behaviors.setup(context -> new Tasks(context, id, schedulerRef));
     }
 
     private String taskName;
@@ -47,20 +51,30 @@ public class Tasks extends AbstractBehavior<Tasks.Message> {
             int randomNumber = random.nextInt(6) + 1;
             randomNumbersList.add(randomNumber);
         }
-        this.scheduler.tell(new Scheduler.TaskIsCreated(taskList, taskName, this.getContext().getSelf()));
+        this.scheduler.tell(new Scheduler.TaskIsCreated(taskName, this.getContext().getSelf(), randomNumbersList.size() + 1));
         return randomNumbersList;
     }
 
     @Override
     public Receive<Message> createReceive() {
         return newReceiveBuilder()
-                .onMessage(CreateIncrementator.class, this::onIncrement)
+                .onMessage(CreatedWorkers.class, this::onCreatedWorkers)
+                .onMessage(Result.class, this::onResult)
                 .build();
     }
 
-    private Behavior<Message> onIncrement(CreateIncrementator msg) {
-        msg.worker.tell(new Worker.Increment(msg.numberToIncrement));
-        //getContext().getLog().info("I ({}) got a message: ExampleMessage({},{})", this.name, msg.someReference, msg.someString);
+    private Behavior<Message> onCreatedWorkers(CreatedWorkers msg) {
+        ActorRef<Worker.Message> multiplicator = msg.neededWorkers.get(msg.neededWorkers.size());
+        multiplicator.tell(new Worker.ListSize(this.taskList.size()));
+        for (int i = 0; i < msg.neededWorkers.size(); i++){
+            msg.neededWorkers.get(i).tell(new Worker.Increment(multiplicator, taskList.get(i)));
+        }
+        return this;
+    }
+
+    private Behavior<Message> onResult(Result msg){
+        getContext().getLog().info("Result of multiplication for {} is: {}", this.taskName, msg.result);
+        this.scheduler.tell(new Scheduler.TaskIsDone(taskList.size() + 1));
         return this;
     }
 }
