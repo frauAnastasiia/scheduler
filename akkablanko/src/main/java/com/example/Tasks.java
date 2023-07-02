@@ -39,8 +39,8 @@ public class Tasks extends AbstractBehavior<Tasks.Message> {
     private Tasks(ActorContext<Message> context, int id, ActorRef<Scheduler.Message> schedulerRef) {
         super(context);
         this.taskName = "Task " + id;
-        taskList = createRandomList();
         this.scheduler = schedulerRef;
+        taskList = createRandomList();
     }
 
     private ArrayList<Integer> createRandomList(){
@@ -64,9 +64,13 @@ public class Tasks extends AbstractBehavior<Tasks.Message> {
     }
 
     private Behavior<Message> onCreatedWorkers(CreatedWorkers msg) {
-        ActorRef<Worker.Message> multiplicator = msg.neededWorkers.get(msg.neededWorkers.size());
+        ActorRef<Worker.Message> multiplicator = msg.neededWorkers.get(msg.neededWorkers.size() - 1);
         multiplicator.tell(new Worker.ListSize(this.taskList.size()));
-        for (int i = 0; i < msg.neededWorkers.size(); i++){
+        //1 2 3 4    //w1 w2 w3 w4 w5
+        getContext().getLog().info("List:" + taskList.toString());
+        for (int i = 0; i < taskList.size(); i++){
+            getContext().getLog().info("List element:" + taskList.get(i).toString());
+            getContext().getLog().info("");
             msg.neededWorkers.get(i).tell(new Worker.Increment(multiplicator, taskList.get(i)));
         }
         return this;

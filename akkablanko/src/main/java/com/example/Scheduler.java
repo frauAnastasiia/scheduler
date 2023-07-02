@@ -1,7 +1,7 @@
 package com.example;
 
 import akka.actor.typed.ActorRef;
-import akka.actor.typed.javadsl.TimerScheduler;
+import java.util.UUID;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.ActorContext;
@@ -70,7 +70,8 @@ public class Scheduler extends AbstractBehavior<Scheduler.Message> {
     private Behavior<Message> onCreateTask(CreateTask msg) {
         int countTasks = 1;
         while (countTasks <= 20) {
-            this.getContext().spawn(Tasks.create(countTasks, this.getContext().getSelf()), "task " + countTasks);
+            getContext().getLog().info("I AM HERE");
+            this.getContext().spawn(Tasks.create(countTasks, this.getContext().getSelf()), "task" + countTasks);
             countTasks++;
         }
         return this;
@@ -89,7 +90,8 @@ public class Scheduler extends AbstractBehavior<Scheduler.Message> {
         activeWorkers += neededNumberOfWorkers;
         ArrayList<ActorRef<Worker.Message>> neededWorkers = new ArrayList<>();
         for (int i = 0; i < activeWorkers; i++) {
-            ActorRef<Worker.Message> newWorker = this.getContext().spawn(Worker.create(this.getContext().getSelf(), task), "worker");
+            UUID uniqueId = UUID.randomUUID();
+            ActorRef<Worker.Message> newWorker = this.getContext().spawn(Worker.create(this.getContext().getSelf(), task), "worker" + uniqueId);
             neededWorkers.add(newWorker);
             task.tell(new Tasks.CreatedWorkers(neededWorkers));
         }
